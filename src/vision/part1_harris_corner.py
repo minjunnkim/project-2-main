@@ -39,9 +39,24 @@ def compute_image_gradients(image_bw: np.ndarray) -> Tuple[np.ndarray, np.ndarra
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
     
-    raise NotImplementedError('`compute_image_gradients` function in ' +
-        '`part1_harris_corner.py` needs to be implemented')
+    M, N = image_bw.shape
+    Ix = np.zeros((M, N), dtype=np.float32)
+    Iy = np.zeros((M, N), dtype=np.float32)
 
+    # Define padding size (1 pixel for 3x3 kernel)
+    pad_size = 1
+    padded_image = np.pad(image_bw, pad_size, mode='constant', constant_values=0)
+
+    # Apply Sobel filter manually using nested loops
+    for i in range(1, M + 1):  # Offset by 1 due to padding
+        for j in range(1, N + 1):
+            # Extract the 3x3 region
+            region = padded_image[i - 1:i + 2, j - 1:j + 2]
+            
+            # Compute the gradient values
+            Ix[i - 1, j - 1] = np.sum(region * SOBEL_X_KERNEL)
+            Iy[i - 1, j - 1] = np.sum(region * SOBEL_Y_KERNEL)
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -170,8 +185,14 @@ def compute_harris_response_map(
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError('`compute_harris_response_map` function in ' +
-        '`part1_harris_corner.py` needs to be implemented')
+    sx2, sy2, sxsy = second_moments(image_bw, ksize, sigma)
+    
+    # determinant and trace
+    det_M = (sx2 * sy2) - (sxsy ** 2)
+    trace_M = sx2 + sy2
+
+    # Harris response score
+    R = det_M - alpha * (trace_M ** 2)
 
     ###########################################################################
     #                           END OF YOUR CODE                              #
@@ -342,8 +363,16 @@ def get_harris_interest_points(
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError('`get_harris_interest_points` function in ' +
-        '`part1_harris_corner.py` needs to be implemented')
+    R = compute_harris_response_map(image_bw)
+
+    # normalize R
+    R = (R - R.min()) / (R.max() - R.min())
+
+    # nms (non-maximum suppression)
+    x, y, c = nms_maxpool_pytorch(R, k=k, ksize=7)
+
+    # remove border values
+    x, y, c = remove_border_vals(image_bw, x, y, c)
 
     ###########################################################################
     #                           END OF YOUR CODE                              #

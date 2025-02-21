@@ -71,10 +71,13 @@ def calculate_projection_matrix(
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError(
-        "`calculate_projection_matrix` function in "
-        + "`projection_matrix.py` needs to be implemented"
-    )
+    # system of equations
+    A = assemble_matrix(points_2d, points_3d)
+
+    # SVD
+    U, S, Vt = np.linalg.svd(A)
+
+    M = Vt[-1].reshape(3, 4)
 
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -103,9 +106,14 @@ def projection(P: np.ndarray, points_3d: np.ndarray) -> np.ndarray:
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError(
-        "`projection` function in " + "`projection_matrix.py` needs to be implemented"
-    )
+    # homogeneous coordinates
+    points_3d_h = np.hstack((points_3d, np.ones((points_3d.shape[0], 1))))
+
+    # project points
+    projected_h = P @ points_3d_h.T  # Shape: (3, n)
+
+    # non-homogeneous coordinates
+    projected_points_2d = (projected_h[:2] / projected_h[2]).T
 
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -132,10 +140,11 @@ def calculate_camera_center(M: np.ndarray) -> np.ndarray:
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError(
-        "`calculate_camera_center` function in "
-        + "`projection_matrix.py` needs to be implemented"
-    )
+    Q = M[:, :3]  # first three columns
+    m4 = M[:, 3]  # last column
+
+    # cc = -Q^{-1} m4
+    cc = -np.linalg.inv(Q) @ m4
 
     ###########################################################################
     #                             END OF YOUR CODE                            #

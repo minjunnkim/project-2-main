@@ -20,10 +20,29 @@ def normalize_points(points: np.ndarray) -> (np.ndarray, np.ndarray):
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError(
-        "`normalize_points` function in "
-        + "`fundamental_matrix.py` needs to be implemented"
-    )
+    centroid = np.mean(points, axis=0)  # Compute centroid (mean x and y)
+    
+    std_x = np.std(points[:, 0])  # Compute standard deviation for x
+    std_y = np.std(points[:, 1])  # Compute standard deviation for y
+
+    scale_x = 1.0 / std_x  # Scale factor for x
+    scale_y = 1.0 / std_y  # Scale factor for y
+    
+    # Construct transformation matrix
+    T = np.array([
+        [scale_x, 0, -scale_x * centroid[0]],
+        [0, scale_y, -scale_y * centroid[1]],
+        [0, 0, 1]
+    ])
+    
+    # Convert points to homogeneous coordinates
+    points_homog = np.hstack((points, np.ones((points.shape[0], 1))))
+    
+    # Apply transformation matrix
+    points_normalized_homog = (T @ points_homog.T).T  # Apply transformation
+    
+    # Convert back to non-homogeneous form
+    points_normalized = points_normalized_homog[:, :2]
 
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -51,10 +70,7 @@ def unnormalize_F(F_norm: np.ndarray, T_a: np.ndarray, T_b: np.ndarray) -> np.nd
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError(
-        "`unnormalize_F` function in "
-        + "`fundamental_matrix.py` needs to be implemented"
-    )
+    F_orig = T_b.T @ F_norm @ T_a
 
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -111,10 +127,26 @@ def estimate_fundamental_matrix(
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError(
-        "`estimate_fundamental_matrix` function in "
-        + "`fundamental_matrix.py` needs to be implemented"
-    )
+    # Normalize the points
+    points_a_normalized, T_a = normalize_points(points_a)
+    points_b_normalized, T_b = normalize_points(points_b)
+
+    # Construct the equation system Ax = 0
+    A = np.zeros((points_a.shape[0], 9))
+    for i in range(points_a.shape[0]):
+        u, v = points_a_normalized[i]
+        u_prime, v_prime = points_b_normalized[i]
+        A[i] = [u_prime * u, u_prime * v, u_prime, v_prime * u, v_prime * v, v_prime, u, v, 1]
+
+    # Solve using SVD
+    _, _, Vt = np.linalg.svd(A)
+    F_normalized = Vt[-1].reshape(3, 3)
+
+    # Enforce rank-2 constraint
+    F_normalized = make_singular(F_normalized)
+
+    # Unnormalize the fundamental matrix
+    F = unnormalize_F(F_normalized, T_a, T_b)
 
     ###########################################################################
     #                             END OF YOUR CODE                            #

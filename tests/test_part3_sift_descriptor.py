@@ -187,6 +187,7 @@ def test_get_feat_vec():
         ]
     ).reshape(128, 1)
 
+
     assert np.allclose(fv, expected_fv, atol=1e-2)
 
 

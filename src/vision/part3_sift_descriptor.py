@@ -42,15 +42,14 @@ def get_magnitudes_and_orientations(
             the gradients at each pixel location. angles should range from
             -PI to PI.
     """
-    magnitudes = []  # placeholder
-    orientations = []  # placeholder
+    
 
     ###########################################################################
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError('`get_magnitudes_and_orientations()` function ' +
-        'in `part4_sift_descriptor.py` needs to be implemented')
+    magnitudes = np.sqrt(Ix**2 + Iy**2)
+    orientations = np.arctan2(Iy, Ix)
 
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -102,14 +101,23 @@ def get_gradient_histogram_vec_from_patch(
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError('`get_gradient_histogram_vec_from_patch` ' +
-        'function in `part4_sift_descriptor.py` needs to be implemented')
+    wgh = np.zeros((4, 4, NUM_BINS))  
+
+    # histograms
+    for i in range(4):
+        for j in range(4):
+            cell_mags = window_magnitudes[i*4:(i+1)*4, j*4:(j+1)*4]
+            cell_oris = window_orientations[i*4:(i+1)*4, j*4:(j+1)*4]
+
+            hist, _ = np.histogram(cell_oris, bins=bins, weights=cell_mags, density=False)
+            wgh[i, j, :] = hist
+
 
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
 
-    return wgh
+    return wgh.flatten().reshape(128, 1)
 
 
 def get_feat_vec(
@@ -158,20 +166,36 @@ def get_feat_vec(
             "feat_dim" is the feature_dimensionality (e.g. 128 for standard SIFT).
             These are the computed features.
     """
-
-    fv = []#placeholder
+    
     #############################################################################
     # TODO: YOUR CODE HERE                                                      #                                          #
     #############################################################################
+    
+    half_width = feature_width // 2
+    c, r = int(round(c)) + 1, int(round(r)) + 1
 
-    raise NotImplementedError('`get_feat_vec` function in ' +
-        '`student_sift.py` needs to be implemented')
+    # boundary check
+    if (r - half_width < 0 or r + half_width > magnitudes.shape[0] or
+        c - half_width < 0 or c + half_width > magnitudes.shape[1]):
+        return np.zeros((128, 1))
+
+    # extract patch
+    patch_mags = magnitudes[r - half_width:r + half_width, c - half_width:c + half_width]
+    patch_oris = orientations[r - half_width:r + half_width, c - half_width:c + half_width]
+
+    # gradient histogram vector
+    fv = get_gradient_histogram_vec_from_patch(patch_mags, patch_oris)
+    
+    # L2 norm
+    norm_factor = np.linalg.norm(fv) + 1e-10  # Avoid division by zero
+    fv /= norm_factor
+    
+    fv = np.sqrt(fv)
 
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
     return fv
-
 
 def get_SIFT_descriptors(
     image_bw: np.ndarray,
@@ -204,8 +228,12 @@ def get_SIFT_descriptors(
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError('`get_SIFT_descriptors` function in ' +
-        '`part4_sift_descriptor.py` needs to be implemented')
+    Ix, Iy = compute_image_gradients(image_bw)
+    magnitudes, orientations = get_magnitudes_and_orientations(Ix, Iy)
+    
+    descriptors = [get_feat_vec(c, r, magnitudes, orientations, feature_width) for c, r in zip(X, Y)]
+    
+    fvs = np.array(descriptors).reshape(len(X), 128)
 
     ###########################################################################
     #                             END OF YOUR CODE                            #

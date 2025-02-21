@@ -27,11 +27,12 @@ def calculate_num_ransac_iterations(
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError(
-        "`calculate_num_ransac_iterations` function "
-        + "in `ransac.py` needs to be implemented"
-    )
+    prob_all_inliers = ind_prob_correct ** sample_size
 
+    num_samples = math.log(1 - prob_success) / math.log(1 - prob_all_inliers)
+
+    num_samples = math.ceil(num_samples)
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -84,10 +85,40 @@ def ransac_fundamental_matrix(
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError(
-        "`ransac_fundamental_matrix` function in "
-        + "`ransac.py` needs to be implemented"
-    )
+    num_iterations = calculate_num_ransac_iterations(prob_success=0.99, sample_size=8, ind_prob_correct=0.5)
+    best_F = None
+    max_inliers = 0
+    inliers_a = None
+    inliers_b = None
+    threshold = 0.1
+
+    for _ in range(num_iterations):
+        # random sample 8 correspondences
+        sample_indices = np.random.choice(matches_a.shape[0], size=8, replace=False)
+        sampled_a = matches_a[sample_indices]
+        sampled_b = matches_b[sample_indices]
+
+        # estimate fundamental matrix
+        F = estimate_fundamental_matrix(sampled_a, sampled_b)
+
+        # compute error
+        ones = np.ones((matches_a.shape[0], 1))
+        homogeneous_a = np.hstack((matches_a, ones))
+        homogeneous_b = np.hstack((matches_b, ones))
+
+        # compute epipolar constraint errors
+        errors = np.abs(np.sum(homogeneous_b * (F @ homogeneous_a.T).T, axis=1))
+
+        # identify inliers
+        inlier_mask = errors < threshold
+        num_inliers = np.sum(inlier_mask)
+
+        # update best model
+        if num_inliers > max_inliers:
+            max_inliers = num_inliers
+            best_F = F
+            inliers_a = matches_a[inlier_mask]
+            inliers_b = matches_b[inlier_mask]
 
     ###########################################################################
     #                             END OF YOUR CODE                            #

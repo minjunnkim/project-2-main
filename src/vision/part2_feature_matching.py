@@ -77,8 +77,25 @@ def match_features_ratio_test(
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError('`match_features_ratio_test` function in ' +
-        '`part3_feature_matching.py` needs to be implemented')
+    # pairwise distances between features1 and features2
+    dists = compute_feature_distances(features1, features2)
+
+    # two closest neighbors for each feature in features1
+    nearest_idxs = np.argsort(dists, axis=1)[:, :2]  
+    d1 = dists[np.arange(dists.shape[0]), nearest_idxs[:, 0]]  
+    d2 = dists[np.arange(dists.shape[0]), nearest_idxs[:, 1]]  
+
+    # ratio test: NNDR = d1 / d2
+    ratio = d1 / d2
+
+    # apply threshold
+    threshold = 0.8
+    valid_matches = ratio < threshold  
+
+    # extract valid matches and confidence scores
+    match_indices = np.where(valid_matches)[0]
+    matches = np.stack((match_indices, nearest_idxs[match_indices, 0]), axis=1)
+    confidences = 1 - ratio[valid_matches]  
 
     ###########################################################################
     #                             END OF YOUR CODE                            #
